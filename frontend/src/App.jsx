@@ -101,10 +101,11 @@ export default function App() {
         }
     }
 
-    /* ---------- UI (UNCHANGED) ---------- */
     return (
         <div className="min-h-screen flex items-center justify-center bg-zinc-100 p-4 font-inter">
-
+            <div className="absolute top-12 left-20 text-2xl font-bold text-green-600">
+                ConnectHub.
+            </div>
             {showNamePopup && (
                 <div className="fixed inset-0 flex items-center justify-center z-40">
                     <div className="bg-white rounded-xl shadow-lg max-w-md p-6">
@@ -137,11 +138,11 @@ export default function App() {
 
                     <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
                         <div className="h-10 w-10 rounded-full bg-[#075E54] flex items-center justify-center text-white font-semibold">
-                            R
+                            CH
                         </div>
                         <div className="flex-1">
                             <div className="text-sm font-medium text-[#303030]">
-                                Realtime group chat
+                                ConnectHub • Live Chat
                             </div>
 
                             {typers.length > 0 && (
