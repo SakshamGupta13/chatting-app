@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { connectWS } from './ws';
 
 export default function App() {
-    
+
     const timer = useRef(null);
     const socket = useRef(null);
 
@@ -14,45 +14,37 @@ export default function App() {
     const [messages, setMessages] = useState([]);
     const [text, setText] = useState('');
 
+    /* ---------- SOCKET INIT ---------- */
     useEffect(() => {
         socket.current = connectWS();
 
-        socket.current.on('connect', () => {
-            socket.current.on('roomNotice', (userName) => {
-                console.log(`${userName} joined to group!`);
-            });
+        socket.current.on('roomNotice', (userName) => {
+            console.log(`${userName} joined the group`);
+        });
 
-            socket.current.on('chatMessage', (msg) => {
-                // push to existing messages list
-                console.log('msg', msg);
-                setMessages((prev) => [...prev, msg]);
-            });
+        socket.current.on('chatMessage', (msg) => {
+            setMessages((prev) => [...prev, msg]);
+        });
 
-            socket.current.on('typing', (userName) => {
-                setTypers((prev) => {
-                    const isExist = prev.find((typer) => typer === userName);
-                    if (!isExist) {
-                        return [...prev, userName];
-                    }
+        socket.current.on('typing', (name) => {
+            setTypers((prev) =>
+                prev.includes(name) ? prev : [...prev, name]
+            );
+        });
 
-                    return prev;
-                });
-            });
-
-            socket.current.on('stopTyping', (userName) => {
-                setTypers((prev) => prev.filter((typer) => typer !== userName));
-            });
+        socket.current.on('stopTyping', (name) => {
+            setTypers((prev) => prev.filter((t) => t !== name));
         });
 
         return () => {
-            socket.current.off('roomNotice');
-            socket.current.off('chatMessage');
-            socket.current.off('typing');
-            socket.current.off('stopTyping');
+            socket.current.disconnect();
         };
     }, []);
 
+    /* ---------- TYPING HANDLER ---------- */
     useEffect(() => {
+        if (!userName) return;
+
         if (text) {
             socket.current.emit('typing', userName);
             clearTimeout(timer.current);
@@ -62,12 +54,10 @@ export default function App() {
             socket.current.emit('stopTyping', userName);
         }, 1000);
 
-        return () => {
-            clearTimeout(timer.current);
-        };
+        return () => clearTimeout(timer.current);
     }, [text, userName]);
 
-    // FORMAT TIMESTAMP TO HH:MM FOR MESSAGES
+    /* ---------- TIME FORMAT ---------- */
     function formatTime(ts) {
         const d = new Date(ts);
         const hh = String(d.getHours()).padStart(2, '0');
@@ -75,40 +65,35 @@ export default function App() {
         return `${hh}:${mm}`;
     }
 
-    // SUBMIT NAME TO GET STARTED, OPEN CHAT WINDOW WITH INITIAL MESSAGE
+    /* ---------- NAME SUBMIT ---------- */
     function handleNameSubmit(e) {
         e.preventDefault();
         const trimmed = inputName.trim();
         if (!trimmed) return;
 
-        // join room
         socket.current.emit('joinRoom', trimmed);
 
         setUserName(trimmed);
         setShowNamePopup(false);
     }
 
-    // SEND MESSAGE FUNCTION
+    /* ---------- SEND MESSAGE ---------- */
     function sendMessage() {
         const t = text.trim();
         if (!t) return;
 
-        // USER MESSAGE
         const msg = {
             id: Date.now(),
             sender: userName,
             text: t,
             ts: Date.now(),
         };
+
         setMessages((m) => [...m, msg]);
-
-        // emit
         socket.current.emit('chatMessage', msg);
-
         setText('');
     }
 
-    // HANDLE ENTER KEY TO SEND MESSAGE
     function handleKeyDown(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -116,13 +101,16 @@ export default function App() {
         }
     }
 
+    /* ---------- UI (UNCHANGED) ---------- */
     return (
         <div className="min-h-screen flex items-center justify-center bg-zinc-100 p-4 font-inter">
-            {/* ENTER YOUR NAME TO START CHATTING */}
+
             {showNamePopup && (
                 <div className="fixed inset-0 flex items-center justify-center z-40">
                     <div className="bg-white rounded-xl shadow-lg max-w-md p-6">
-                        <h1 className="text-xl font-semibold text-black">Enter your name</h1>
+                        <h1 className="text-xl font-semibold text-black">
+                            Enter your name
+                        </h1>
                         <p className="text-sm text-gray-500 mt-1">
                             Enter your name to start chatting. This will be used to identify
                         </p>
@@ -144,10 +132,9 @@ export default function App() {
                 </div>
             )}
 
-            {/* CHAT WINDOW */}
             {!showNamePopup && (
                 <div className="w-full max-w-2xl h-[90vh] bg-white rounded-xl shadow-md flex flex-col overflow-hidden">
-                    {/* CHAT HEADER */}
+
                     <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
                         <div className="h-10 w-10 rounded-full bg-[#075E54] flex items-center justify-center text-white font-semibold">
                             R
@@ -157,12 +144,12 @@ export default function App() {
                                 Realtime group chat
                             </div>
 
-                            {typers.length ? (
+                            {typers.length > 0 && (
                                 <div className="text-xs text-gray-500">
-                                    {typers.join(', ')} is typing...
+                                    {typers.length === 1
+                                        ? `${typers[0]} is typing...`
+                                        : `${typers.join(', ')} are typing...`}
                                 </div>
-                            ) : (
-                                ''
                             )}
                         </div>
                         <div className="text-sm text-gray-500">
@@ -173,7 +160,6 @@ export default function App() {
                         </div>
                     </div>
 
-                    {/* CHAT MESSAGE LIST */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-zinc-100 flex flex-col">
                         {messages.map((m) => {
                             const mine = m.sender === userName;
@@ -191,7 +177,9 @@ export default function App() {
                                             {m.text}
                                         </div>
                                         <div className="flex justify-between items-center mt-1 gap-16">
-                                            <div className="text-[11px] font-bold">{m.sender}</div>
+                                            <div className="text-[11px] font-bold">
+                                                {m.sender}
+                                            </div>
                                             <div className="text-[11px] text-gray-500 text-right">
                                                 {formatTime(m.ts)}
                                             </div>
@@ -202,7 +190,6 @@ export default function App() {
                         })}
                     </div>
 
-                    {/* CHAT TEXTAREA */}
                     <div className="px-4 py-3 border-t border-gray-200 bg-white">
                         <div className="flex items-center justify-between gap-4 border border-gray-200 rounded-full">
                             <textarea
@@ -220,6 +207,7 @@ export default function App() {
                             </button>
                         </div>
                     </div>
+
                 </div>
             )}
         </div>

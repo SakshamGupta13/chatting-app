@@ -3,29 +3,23 @@ import express from 'express';
 import { Server } from 'socket.io';
 
 const app = express();
-
 const server = createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: '*',
-    },
+        origin: "https://chatting-app-frontend-of7f.onrender.com",
+        methods: ["GET", "POST"]
+    }
 });
 
 const ROOM = 'group';
 
 io.on('connection', (socket) => {
-    console.log('a user connected', socket.id);
+    console.log('User connected:', socket.id);
 
     socket.on('joinRoom', async (userName) => {
-        console.log(`${userName} is joining the group.`);
-
+        console.log(`${userName} joined the group`);
         await socket.join(ROOM);
-
-        // send to all
-        // io.to(ROOM).emit('roomNotice', userName);
-
-        // broadcast
         socket.to(ROOM).emit('roomNotice', userName);
     });
 
@@ -40,12 +34,17 @@ io.on('connection', (socket) => {
     socket.on('stopTyping', (userName) => {
         socket.to(ROOM).emit('stopTyping', userName);
     });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
 });
 
 app.get('/', (req, res) => {
-    res.send('<h1>Hello world</h1>');
+    res.send('<h1>Socket.IO Chat Backend Running</h1>');
 });
 
-server.listen(1000, () => {
-    console.log('server running at http://localhost:1000');
+const PORT = process.env.PORT || 1000;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
