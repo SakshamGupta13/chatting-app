@@ -103,10 +103,12 @@ export default function App() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-zinc-100 p-4 font-inter">
-            <div className="absolute top-12 left-20 text-2xl font-bold text-green-600">
-                ConnectHub.
-            </div>
+           
             {showNamePopup && (
+                <>
+                 <div className="absolute top-12 left-20 text-2xl font-bold text-green-600">
+                    ConnectHub.
+                </div>
                 <div className="fixed inset-0 flex items-center justify-center z-40">
                     <div className="bg-white rounded-xl shadow-lg max-w-md p-6">
                         <h1 className="text-xl font-semibold text-black">
@@ -131,6 +133,7 @@ export default function App() {
                         </form>
                     </div>
                 </div>
+                </>
             )}
 
             {!showNamePopup && (
